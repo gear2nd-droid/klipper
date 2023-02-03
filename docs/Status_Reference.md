@@ -330,8 +330,12 @@ The following information is available in the `print_stats` object
 [virtual_sdcard](Config_Reference.md#virtual_sdcard) config section is
 defined):
 - `filename`, `total_duration`, `print_duration`, `filament_used`,
-  `state`, `message`: Estimated information about the current print
-  when a virtual_sdcard print is active.
+  `state`, `message`: Estimated information about the current print when a
+  virtual_sdcard print is active.
+- `info.total_layer`: The total layer value of the last `SET_PRINT_STATS_INFO
+   TOTAL_LAYER=<value>` G-Code command.
+- `info.current_layer`: The current layer value of the last
+  `SET_PRINT_STATS_INFO CURRENT_LAYER=<value>` G-Code command.
 
 ## probe
 
@@ -364,6 +368,28 @@ The following information is available in the `query_endstops` object
   if this is used in a macro, due to the order of template expansion,
   the QUERY_ENDSTOP command must be run prior to the macro containing
   this reference.
+
+## screws_tilt_adjust
+
+The following information is available in the `screws_tilt_adjust`
+object:
+- `error`: Returns True if the most recent `SCREWS_TILT_CALCULATE`
+  command included the `MAX_DEVIATION` parameter and any of the probed
+  screw points exceeded the specified `MAX_DEVIATION`.
+- `results`: A list of the probed screw locations. Each entry in
+  the list will be a dictionary containing the following keys:
+  - `name`: The name of the screw as specified in the config file.
+  - `x`: The X coordinate of the screw as specified in the config file.
+  - `y`: The Y coordinate of the screw as specified in the config file.
+  - `z`: The measured Z height of the screw location.
+  - `sign`: A string specifying the direction to turn to screw for the
+    necessary adjustment. Either "CW" for clockwise or "CCW" for
+    counterclockwise. The base screw will not have a `sign` key.
+  - `adjust`: The number of screw turns to adjust the screw, given in
+    the format "HH:MM," where "HH" is the number of full screw turns
+    and "MM" is the number of "minutes of a clock face" representing
+    a partial screw turn. (E.g. "01:15" would mean to turn the screw
+    one and a quarter revolutions.)
 
 ## servo
 
@@ -483,6 +509,19 @@ object is always available):
   state. Possible values are: "ready", "startup", "shutdown", "error".
 - `state_message`: A human readable string giving additional context
   on the current Klipper state.
+
+## z_thermal_adjust
+
+The following information is available in the `z_thermal_adjust` object (this
+object is available if [z_thermal_adjust](Config_Reference.md#z_thermal_adjust)
+is defined).
+- `enabled`: Returns True if adjustment is enabled.
+- `temperature`: Current (smoothed) temperature of the defined sensor. [degC]
+- `measured_min_temp`: Minimum measured temperature. [degC]
+- `measured_max_temp`: Maximum measured temperature. [degC]
+- `current_z_adjust`: Last computed Z adjustment [mm].
+- `z_adjust_ref_temperature`: Current reference temperature used for calculation
+  of Z `current_z_adjust` [degC].
 
 ## z_tilt
 
