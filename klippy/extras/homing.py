@@ -249,9 +249,11 @@ class PrinterHoming:
                 raise self.printer.command_error(
                     "Probing failed due to printer shutdown")
             raise
-        if hmove.check_no_movement() is not None:
-            raise self.printer.command_error(
-                "Probe triggered prior to movement")
+        check = hmove.check_no_movement()
+        if check != 'probe':
+            if check is not None:
+                raise self.printer.command_error(
+                    "Probe triggered prior to movement")
         return epos
     def cmd_G28(self, gcmd):
         # Move to origin
@@ -264,6 +266,7 @@ class PrinterHoming:
         homing_state = Homing(self.printer)
         homing_state.set_axes(axes)
         kin = self.printer.lookup_object('toolhead').get_kinematics()
+        homing_state.gcmd = gcmd
         try:
             kin.home(homing_state)
         except self.printer.command_error:

@@ -5,6 +5,7 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 import traceback, logging, ast, copy, json
 import jinja2
+import math
 
 
 ######################################################################
@@ -58,7 +59,7 @@ class TemplateWrapper:
         if context is None:
             context = self.create_template_context()
         try:
-            return str(self.template.render(context))
+            return str(self.template.render(context, math=math))
         except Exception as e:
             msg = "Error evaluating '%s': %s" % (
                 self.name, traceback.format_exception_only(type(e), e)[-1])

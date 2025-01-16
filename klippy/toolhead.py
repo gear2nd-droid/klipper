@@ -16,7 +16,7 @@ import mcu, chelper, kinematics.extruder
 class Move:
     def __init__(self, toolhead, start_pos, end_pos, speed):
         self.toolhead = toolhead
-        # original
+        self.kin = self.toolhead.get_kinematics()
         self.start_pos = tuple(start_pos)
         self.end_pos = tuple(end_pos)
         self.accel = toolhead.max_accel
@@ -25,29 +25,50 @@ class Move:
         velocity = min(speed, toolhead.max_velocity)
         self.is_kinematic_move = True
         self.axes_d = axes_d = [end_pos[i] - start_pos[i] for i in (0, 1, 2, 3, 4, 5, 6)]
-        self.move_d = move_d = math.sqrt(sum([d*d for d in axes_d[:3]]))
+        self.move_d = move_d = self.kin.calc_move_distance(start_pos, end_pos)  
         if move_d < .000000001:
-            self.move_d = move_d = math.sqrt(sum([d*d for d in axes_d[3:6]]))
-            if move_d < .000000001:
-                # Extrude only move
-                self.end_pos = (start_pos[0], start_pos[1], start_pos[2],
-                                start_pos[3], start_pos[4], start_pos[5],
-                                end_pos[6])
-                axes_d[0] = axes_d[1] = axes_d[2] = axes_d[3] = axes_d[4] = axes_d[5] = 0.
-                self.move_d = move_d = abs(axes_d[6])
-                inv_move_d = 0.
-                if move_d:
-                    inv_move_d = 1. / move_d
-                self.accel = 99999999.9
-                velocity = speed
-                self.is_kinematic_move = False
-            else:
-                self.accel = 99999999.9
+            # Extrude only move
+            self.end_pos = (start_pos[0], start_pos[1], start_pos[2],
+                            start_pos[3], start_pos[4], start_pos[5],
+                            end_pos[6])
+            axes_d[0] = axes_d[1] = axes_d[2] = axes_d[3] = axes_d[4] = axes_d[5] = 0.
+            self.move_d = move_d = abs(axes_d[6])
+            inv_move_d = 0.
+            if move_d:
                 inv_move_d = 1. / move_d
+            self.accel = 99999999.9
+            velocity = speed
+            self.is_kinematic_move = False
         else:
-            inv_move_d = 1. / move_d
+            inv_move_d = 1. / move_d    
         self.axes_r = [d * inv_move_d for d in axes_d]
         self.min_move_t = move_d / velocity
+        # Regulate abnormal movement speeds on the ABC axis
+        if self.min_move_t > 0.0:
+            spd_axes = [d / self.min_move_t for d in axes_d]
+            logging.info('spd_axes:{0},{1},{2},{3},{4},{5}'.format(spd_axes[0],spd_axes[1],spd_axes[2],spd_axes[3],spd_axes[4],spd_axes[5]))
+            spd_flag = False
+            max_spd = 1.0
+            if abs(spd_axes[0]) > self.kin.max_speed_x:
+                spd_flag = True
+                max_spd = max(max_spd, abs(spd_axes[0]) / self.kin.max_speed_x)
+            if abs(spd_axes[1]) > self.kin.max_speed_y:
+                spd_flag = True
+                max_spd = max(max_spd, abs(spd_axes[1]) / self.kin.max_speed_y)
+            if abs(spd_axes[2]) > self.kin.max_speed_z:
+                spd_flag = True
+                max_spd = max(max_spd, abs(spd_axes[2]) / self.kin.max_speed_z)
+            if abs(spd_axes[3]) > self.kin.max_speed_a:
+                spd_flag = True
+                max_spd = max(max_spd, abs(spd_axes[3]) / self.kin.max_speed_a)
+            if abs(spd_axes[4]) > self.kin.max_speed_b:
+                spd_flag = True
+                max_spd = max(max_spd, abs(spd_axes[4]) / self.kin.max_speed_b)
+            if abs(spd_axes[5]) > self.kin.max_speed_c:
+                spd_flag = True
+                max_spd = max(max_spd, abs(spd_axes[5]) / self.kin.max_speed_c)
+            if spd_flag:
+                velocity = velocity / max_spd
         # Junction speeds are tracked in velocity squared.  The
         # delta_v2 is the maximum amount of this squared-velocity that
         # can change in this move.
@@ -210,6 +231,7 @@ class DripModeEndSignal(Exception):
 # Main code to track events (and their timing) on the printer toolhead
 class ToolHead:
     def __init__(self, config):
+        self.kin = None
         self.printer = config.get_printer()
         self.reactor = self.printer.get_reactor()
         self.all_mcus = [

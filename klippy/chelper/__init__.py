@@ -21,7 +21,7 @@ SOURCE_FILES = [
     'pollreactor.c', 'msgblock.c', 'trdispatch.c',
     'kin_cartesian.c', 'kin_corexy.c', 'kin_corexz.c', 'kin_delta.c',
     'kin_deltesian.c', 'kin_polar.c', 'kin_rotary_delta.c', 'kin_winch.c',
-    'kin_extruder.c', 'kin_shaper.c', 'kin_trunnion_bc.c',
+    'kin_extruder.c', 'kin_shaper.c', 'kin_trunnion_bc.c', 'kin_corexybc.c',
 ]
 DEST_LIB = "c_helper.so"
 OTHER_FILES = [
@@ -160,8 +160,14 @@ defs_kin_shaper = """
 
 defs_kin_trunnion_bc = """
     struct stepper_kinematics *trunnion_bc_stepper_alloc(char axis, 
-						double offset_x, double offset_y, double offset_z, 
-						double offset_a, double offset_b, double offset_c);
+						double adjust_x, double adjust_y, double adjust_z, 
+						double adjust_a, double adjust_b, double adjust_c);
+"""
+
+defs_kin_corexybc = """
+    struct stepper_kinematics *corexybc_stepper_alloc(char axis, 
+						double adjust_x, double adjust_y, double adjust_z, 
+						double adjust_a, double adjust_b, double adjust_c);
 """
 
 defs_serialqueue = """
@@ -222,7 +228,7 @@ defs_all = [
     defs_itersolve, defs_trapq, defs_trdispatch,
     defs_kin_cartesian, defs_kin_corexy, defs_kin_corexz, defs_kin_delta,
     defs_kin_deltesian, defs_kin_polar, defs_kin_rotary_delta, defs_kin_winch,
-    defs_kin_extruder, defs_kin_shaper, defs_kin_trunnion_bc, 
+    defs_kin_extruder, defs_kin_shaper, defs_kin_trunnion_bc, defs_kin_corexybc, 
 ]
 
 # Update filenames to an absolute path

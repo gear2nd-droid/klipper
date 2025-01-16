@@ -20,6 +20,10 @@ Commands = {
     'pin_up': 0.001475, 'self_test': 0.001780, 'reset': 0.002190,
     'set_5V_output_mode' : 0.001988, 'set_OD_output_mode' : 0.002091,
     'output_mode_store' : 0.001884,
+    #'pin_down': 0.000647, 'touch_mode': 0.001162,
+    #'pin_up': 0.001473, 'self_test': 0.001782, 'reset': 0.002194,
+    #'set_5V_output_mode' : 0.001988, 'set_OD_output_mode' : 0.002091,
+    #'output_mode_store' : 0.001884,
 }
 
 # BLTouch "endstop" wrapper
@@ -207,8 +211,8 @@ class BLTouchEndstopWrapper:
         if self.multi == 'OFF':
             self.verify_raise_probe()
         self.sync_print_time()
-        if hmove.check_no_movement() is not None:
-            raise self.printer.command_error("BLTouch failed to deploy")
+        #if hmove.check_no_movement() is not None:
+        #    raise self.printer.command_error("BLTouch failed to deploy")
     def get_position_endstop(self):
         return self.position_endstop
     def set_output_mode(self, mode):
