@@ -103,16 +103,20 @@ class CoreXYBCKinematics:
         return [s for rail in self.rails for s in rail.get_steppers()]
     def calc_position(self, stepper_positions):
         pos = [stepper_positions[rail.get_name()] for rail in self.rails]
-        #return [0.5 * (pos[0] + pos[1]), 0.5 * (pos[0] - pos[1]), pos[2], 0, pos[3], pos[4]]
         px = pos[0]
         py = pos[1]
         pz = pos[2]
         pb = pos[3]
         pc = pos[4]
-        bx = px
-        by = py * math.cos(self.adjust_a / 180.0 * math.pi) - pz * math.sin(self.adjust_a / 180.0 * math.pi)
-        bz = py * math.sin(self.adjust_a / 180.0 * math.pi) + pz * math.cos(self.adjust_a / 180.0 * math.pi)
-        return [0.5 * (bx + by), 0.5 * (bx - by), bz, 0, pb, pc]
+        kx = 0.5 * (px + py)
+        ky = 0.5 * (px - py)
+        kz = pz
+        bx = kx
+        by = ky * math.cos(-self.adjust_a / 180.0 * math.pi) \
+            - kz * math.sin(-self.adjust_a / 180.0 * math.pi)
+        bz = ky * math.sin(-self.adjust_a / 180.0 * math.pi) \
+            + kz * math.cos(-self.adjust_a / 180.0 * math.pi)
+        return [bx, by, bz, 0, pb, pc]
     def commanded_pos_to_real_pos(self, commanded_pos):
         flag = False
         for i in range(3):
