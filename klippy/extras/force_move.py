@@ -79,11 +79,12 @@ class ForceMove:
         toolhead.flush_step_generation()
         prev_sk = stepper.set_stepper_kinematics(self.stepper_kinematics)
         prev_trapq = stepper.set_trapq(self.trapq)
-        stepper.set_position((0., 0., 0.))
+        stepper.set_position((0., 0., 0., 0., 0., 0.))
         axis_r, accel_t, cruise_t, cruise_v = calc_move_time(dist, speed, accel)
         print_time = toolhead.get_last_move_time()
         self.trapq_append(self.trapq, print_time, accel_t, cruise_t, accel_t,
-                          0., 0., 0., axis_r, 0., 0., 0., cruise_v, accel)
+                          0., 0., 0., 0., 0., 0., axis_r, 
+                          0., 0., 0., 0., 0., 0., cruise_v, accel)
         print_time = print_time + accel_t + cruise_t + accel_t
         stepper.generate_steps(print_time)
         self.trapq_finalize_moves(self.trapq, print_time + 99999.9,
@@ -131,11 +132,14 @@ class ForceMove:
         x = gcmd.get_float('X', curpos[0])
         y = gcmd.get_float('Y', curpos[1])
         z = gcmd.get_float('Z', curpos[2])
+        a = gcmd.get_float('A', curpos[3])
+        b = gcmd.get_float('B', curpos[4])
+        c = gcmd.get_float('C', curpos[5])
         clear = gcmd.get('CLEAR', '').lower()
         clear_axes = "".join([a for a in "xyz" if a in clear])
-        logging.info("SET_KINEMATIC_POSITION pos=%.3f,%.3f,%.3f clear=%s",
-                     x, y, z, clear_axes)
-        toolhead.set_position([x, y, z, curpos[3]], homing_axes="xyz")
+        logging.info("SET_KINEMATIC_POSITION pos=%.3f,%.3f,%.3f,%.3f,%.3f,%.3f clear=%s",
+                     x, y, z, a, b, c, clear_axes)
+        toolhead.set_position([x, y, z, a, b, c, curpos[6]], homing_axes="xyzabc")
         toolhead.get_kinematics().clear_homing_state(clear_axes)
 
 def load_config(config):

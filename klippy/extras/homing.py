@@ -55,7 +55,7 @@ class HomingMove:
     def _calc_endstop_rate(self, mcu_endstop, movepos, speed):
         startpos = self.toolhead.get_position()
         axes_d = [mp - sp for mp, sp in zip(movepos, startpos)]
-        move_d = math.sqrt(sum([d*d for d in axes_d[:3]]))
+        move_d = math.sqrt(sum([d*d for d in axes_d[:6]]))
         move_t = move_d / speed
         max_steps = max([(abs(s.calc_position_from_coord(startpos)
                               - s.calc_position_from_coord(movepos))
@@ -71,7 +71,7 @@ class HomingMove:
             sname = stepper.get_name()
             kin_spos[sname] += offsets.get(sname, 0) * stepper.get_step_dist()
         thpos = self.toolhead.get_position()
-        return list(kin.calc_position(kin_spos))[:3] + thpos[3:]
+        return list(kin.calc_position(kin_spos))[:6] + thpos[6:]
     def homing_move(self, movepos, speed, probe_pos=False,
                     triggered=True, check_triggered=True):
         # Notify start of homing/probing move
@@ -121,6 +121,7 @@ class HomingMove:
             tt = trigger_times.get(sp.endstop_name, move_end_print_time)
             sp.note_home_end(tt)
         if probe_pos:
+            logging.info('hmove_1')
             halt_steps = {sp.stepper_name: sp.halt_pos - sp.start_pos
                           for sp in self.stepper_positions}
             trig_steps = {sp.stepper_name: sp.trig_pos - sp.start_pos
@@ -128,6 +129,7 @@ class HomingMove:
             haltpos = trigpos = self.calc_toolhead_pos(kin_spos, trig_steps)
             if trig_steps != halt_steps:
                 haltpos = self.calc_toolhead_pos(kin_spos, halt_steps)
+                logging.info('hmove_5:{0},{1},{2},{3},{4}'.format(haltpos[0], haltpos[1], haltpos[2], haltpos[3], haltpos[4]))
             self.toolhead.set_position(haltpos)
             for sp in self.stepper_positions:
                 sp.verify_no_probe_skew(haltpos)
@@ -140,6 +142,7 @@ class HomingMove:
                 halt_kin_spos = {s.get_name(): s.get_commanded_position()
                                  for s in kin.get_steppers()}
                 haltpos = self.calc_toolhead_pos(halt_kin_spos, over_steps)
+                logging.info('hmove_6:{0},{1},{2},{3},{4}'.format(haltpos[0], haltpos[1], haltpos[2], haltpos[3], haltpos[4]))
             self.toolhead.set_position(haltpos)
         # Signal homing/probing move complete
         try:
@@ -153,7 +156,7 @@ class HomingMove:
     def check_no_movement(self):
         if self.printer.get_start_args().get('debuginput') is not None:
             return None
-        for sp in self.stepper_positions:
+        for sp in self.stepper_positions[:3]:
             if sp.start_pos == sp.trig_pos:
                 return sp.endstop_name
         return None
@@ -187,8 +190,8 @@ class Homing:
         # Notify of upcoming homing operation
         self.printer.send_event("homing:home_rails_begin", self, rails)
         # Alter kinematics class to think printer is at forcepos
-        force_axes = [axis for axis in range(3) if forcepos[axis] is not None]
-        homing_axes = "".join(["xyz"[i] for i in force_axes])
+        force_axes = [axis for axis in range(6) if forcepos[axis] is not None]
+        homing_axes = "".join(["xyzabc"[i] for i in force_axes])
         startpos = self._fill_coord(forcepos)
         homepos = self._fill_coord(movepos)
         self.toolhead.set_position(startpos, homing_axes=homing_axes)
@@ -203,7 +206,7 @@ class Homing:
             startpos = self._fill_coord(forcepos)
             homepos = self._fill_coord(movepos)
             axes_d = [hp - sp for hp, sp in zip(homepos, startpos)]
-            move_d = math.sqrt(sum([d*d for d in axes_d[:3]]))
+            move_d = math.sqrt(sum([d*d for d in axes_d[:6]]))
             retract_r = min(1., hi.retract_dist / move_d)
             retractpos = [hp - ad * retract_r
                           for hp, ad in zip(homepos, axes_d)]
@@ -270,11 +273,11 @@ class PrinterHoming:
     def cmd_G28(self, gcmd):
         # Move to origin
         axes = []
-        for pos, axis in enumerate('XYZ'):
+        for pos, axis in enumerate('XYZABC'):
             if gcmd.get(axis, None) is not None:
                 axes.append(pos)
         if not axes:
-            axes = [0, 1, 2]
+            axes = [0, 1, 2, 3, 4, 5]
         homing_state = Homing(self.printer)
         homing_state.set_axes(axes)
         kin = self.printer.lookup_object('toolhead').get_kinematics()

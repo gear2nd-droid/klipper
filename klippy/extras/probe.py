@@ -19,7 +19,7 @@ def calc_probe_z_average(positions, method='average'):
         # Use mean average
         count = float(len(positions))
         return [sum([pos[i] for pos in positions]) / count
-                for i in range(3)]
+                for i in range(6)]
     # Use median
     z_sorted = sorted(positions, key=(lambda p: p[2]))
     middle = len(positions) // 2
@@ -115,10 +115,10 @@ class ProbeCommandHelper:
         sample_count = gcmd.get_int("SAMPLES", 10, minval=1)
         toolhead = self.printer.lookup_object('toolhead')
         pos = toolhead.get_position()
-        gcmd.respond_info("PROBE_ACCURACY at X:%.3f Y:%.3f Z:%.3f"
+        gcmd.respond_info("PROBE_ACCURACY at X:%.3f Y:%.3f Z:%.3f A:%.3f B:%.3f C:%.3f"
                           " (samples=%d retract=%.3f"
                           " speed=%.1f lift_speed=%.1f)\n"
-                          % (pos[0], pos[1], pos[2],
+                          % (pos[0], pos[1], pos[2], pos[3], pos[4], pos[5],
                              sample_count, params['sample_retract_dist'],
                              params['probe_speed'], params['lift_speed']))
         # Create dummy gcmd with SAMPLES=1
@@ -235,15 +235,16 @@ class ProbeSessionHelper:
         self.mcu_probe = mcu_probe
         gcode = self.printer.lookup_object('gcode')
         self.dummy_gcode_cmd = gcode.create_gcode_command("", "", {})
-        # Infer Z position to move to during a probe
-        if config.has_section('stepper_z'):
-            zconfig = config.getsection('stepper_z')
-            self.z_position = zconfig.getfloat('position_min', 0.,
-                                               note_valid=False)
-        else:
-            pconfig = config.getsection('printer')
-            self.z_position = pconfig.getfloat('minimum_z_position', 0.,
-                                               note_valid=False)
+        self.z_position = config.getfloat('probe_zpos', 0.)
+        ## Infer Z position to move to during a probe
+        #if config.has_section('stepper_z'):
+        #    zconfig = config.getsection('stepper_z')
+        #    self.z_position = zconfig.getfloat('position_min', 0.,
+        #                                       note_valid=False)
+        #else:
+        #    pconfig = config.getsection('printer')
+        #    self.z_position = pconfig.getfloat('minimum_z_position', 0.,
+        #                                       note_valid=False)
         self.homing_helper = HomingViaProbeHelper(config, mcu_probe)
         # Configurable probing speeds
         self.speed = config.getfloat('speed', 5.0, above=0.)
@@ -325,15 +326,15 @@ class ProbeSessionHelper:
         self.printer.send_event("probe:update_results", epos)
         # Report results
         gcode = self.printer.lookup_object('gcode')
-        gcode.respond_info("probe at %.3f,%.3f is z=%.6f"
-                           % (epos[0], epos[1], epos[2]))
-        return epos[:3]
+        gcode.respond_info("probe at %.3f,%.3f,%.3f,%.3f,%.3f is z=%.6f"
+                           % (epos[0], epos[1], epos[3], epos[4], epos[5], epos[2]))
+        return epos[:6]
     def run_probe(self, gcmd):
         if not self.multi_probe_pending:
             self._probe_state_error()
         params = self.get_probe_params(gcmd)
         toolhead = self.printer.lookup_object('toolhead')
-        probexy = toolhead.get_position()[:2]
+        probexy = toolhead.get_position()
         retries = 0
         positions = []
         sample_count = params['samples']
@@ -351,9 +352,9 @@ class ProbeSessionHelper:
                 positions = []
             # Retract
             if len(positions) < sample_count:
-                toolhead.manual_move(
-                    probexy + [pos[2] + params['sample_retract_dist']],
-                    params['lift_speed'])
+                target = [probexy[0], probexy[1], pos[2] + params['sample_retract_dist'], 
+                    probexy[3], probexy[4], probexy[5], probexy[6]]
+                toolhead.manual_move(target, params['lift_speed'])
         # Calculate result
         epos = calc_probe_z_average(positions, params['samples_result'])
         self.results.append(epos)
@@ -395,7 +396,7 @@ class ProbePointsHelper:
         self.use_offsets = False
         # Internal probing state
         self.lift_speed = self.speed
-        self.probe_offsets = (0., 0., 0.)
+        self.probe_offsets = (0., 0., 0., 0., 0., 0.)
         self.manual_results = []
     def minimum_points(self,n):
         if len(self.probe_points) < n:
@@ -525,14 +526,14 @@ class ProbeEndstopWrapper:
         toolhead = self.printer.lookup_object('toolhead')
         start_pos = toolhead.get_position()
         self.deactivate_gcode.run_gcode_from_command()
-        if toolhead.get_position()[:3] != start_pos[:3]:
+        if toolhead.get_position()[:6] != start_pos[:6]:
             raise self.printer.command_error(
                 "Toolhead moved during probe deactivate_gcode script")
     def _lower_probe(self):
         toolhead = self.printer.lookup_object('toolhead')
         start_pos = toolhead.get_position()
         self.activate_gcode.run_gcode_from_command()
-        if toolhead.get_position()[:3] != start_pos[:3]:
+        if toolhead.get_position()[:6] != start_pos[:6]:
             raise self.printer.command_error(
                 "Toolhead moved during probe activate_gcode script")
     def multi_probe_begin(self):

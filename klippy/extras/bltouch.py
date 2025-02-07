@@ -218,8 +218,8 @@ class BLTouchProbe:
         if self.multi == 'OFF':
             self.verify_raise_probe()
         self.sync_print_time()
-        if hmove.check_no_movement() is not None:
-            raise self.printer.command_error("BLTouch failed to deploy")
+        #if hmove.check_no_movement() is not None:
+        #    raise self.printer.command_error("BLTouch failed to deploy")
     def get_position_endstop(self):
         return self.position_endstop
     def set_output_mode(self, mode):

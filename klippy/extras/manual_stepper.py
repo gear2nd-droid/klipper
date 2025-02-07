@@ -54,7 +54,7 @@ class ManualStepper:
                 se.motor_disable(self.next_cmd_time)
         self.sync_print_time()
     def do_set_position(self, setpos):
-        self.rail.set_position([setpos, 0., 0.])
+        self.rail.set_position([setpos, 0., 0., 0., 0., 0.])
     def do_move(self, movepos, speed, accel, sync=True):
         self.sync_print_time()
         cp = self.rail.get_commanded_position()
@@ -63,7 +63,8 @@ class ManualStepper:
             dist, speed, accel)
         self.trapq_append(self.trapq, self.next_cmd_time,
                           accel_t, cruise_t, accel_t,
-                          cp, 0., 0., axis_r, 0., 0.,
+                          cp, 0., 0., 0., 0., 0., 
+                          axis_r, 0., 0., 0., 0., 0.,
                           0., cruise_v, accel)
         self.next_cmd_time = self.next_cmd_time + accel_t + cruise_t + accel_t
         self.rail.generate_steps(self.next_cmd_time)
@@ -78,7 +79,7 @@ class ManualStepper:
             raise self.printer.command_error(
                 "No endstop for this manual stepper")
         self.homing_accel = accel
-        pos = [movepos, 0., 0., 0.]
+        pos = [movepos, 0., 0., 0., 0., 0., 0.]
         endstops = self.rail.get_endstops()
         phoming = self.printer.lookup_object('homing')
         phoming.manual_home(self, endstops, pos, speed,
@@ -108,7 +109,7 @@ class ManualStepper:
     def flush_step_generation(self):
         self.sync_print_time()
     def get_position(self):
-        return [self.rail.get_commanded_position(), 0., 0., 0.]
+        return [self.rail.get_commanded_position(), 0., 0., 0., 0., 0., 0.]
     def set_position(self, newpos, homing_axes=""):
         self.do_set_position(newpos[0])
     def get_last_move_time(self):
@@ -123,7 +124,7 @@ class ManualStepper:
     def get_steppers(self):
         return self.steppers
     def calc_position(self, stepper_positions):
-        return [stepper_positions[self.rail.get_name()], 0., 0.]
+        return [stepper_positions[self.rail.get_name()], 0., 0., 0., 0., 0.]
 
 def load_config_prefix(config):
     return ManualStepper(config)
